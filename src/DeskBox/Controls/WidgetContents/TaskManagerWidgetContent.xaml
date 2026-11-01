@@ -83,7 +83,7 @@
                 Style="{StaticResource TaskManagerHeaderButtonStyle}"
                 ToolTipService.ToolTip="Sort by CPU">
                 <StackPanel Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="CPU" />
+                    <TextBlock Text="{Binding CpuHeaderText}" />
                     <TextBlock
                         FontSize="10"
                         Text="{Binding CpuSortGlyph}"
@@ -96,7 +96,7 @@
                 Style="{StaticResource TaskManagerHeaderButtonStyle}"
                 ToolTipService.ToolTip="Sort by memory">
                 <StackPanel Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="Memory" />
+                    <TextBlock Text="{Binding MemoryHeaderText}" />
                     <TextBlock
                         FontSize="10"
                         Text="{Binding MemorySortGlyph}"
@@ -109,7 +109,7 @@
                 Style="{StaticResource TaskManagerHeaderButtonStyle}"
                 ToolTipService.ToolTip="Sort by disk">
                 <StackPanel Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="Disk" />
+                    <TextBlock Text="{Binding DiskHeaderText}" />
                     <TextBlock
                         FontSize="10"
                         Text="{Binding DiskSortGlyph}"
@@ -122,7 +122,7 @@
                 Style="{StaticResource TaskManagerHeaderButtonStyle}"
                 ToolTipService.ToolTip="Sort by network">
                 <StackPanel Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="Network" />
+                    <TextBlock Text="{Binding NetworkHeaderText}" />
                     <TextBlock
                         FontSize="10"
                         Text="{Binding NetworkSortGlyph}"
@@ -158,17 +158,25 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel
                             Grid.Column="0"
-                            Spacing="2">
-                            <TextBlock
-                                FontWeight="SemiBold"
-                                Text="{Binding Name}"
-                                TextTrimming="CharacterEllipsis"
-                                TextWrapping="NoWrap" />
-                            <TextBlock
-                                FontSize="10"
-                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                Text="{Binding InstanceCountText}"
-                                TextTrimming="CharacterEllipsis" />
+                            Orientation="Horizontal"
+                            Spacing="6">
+                            <BitmapIcon
+                                Width="16"
+                                Height="16"
+                                VerticalAlignment="Center"
+                                UriSource="{Binding IconUri}" />
+                            <StackPanel Spacing="2">
+                                <TextBlock
+                                    FontWeight="SemiBold"
+                                    Text="{Binding Name}"
+                                    TextTrimming="CharacterEllipsis"
+                                    TextWrapping="NoWrap" />
+                                <TextBlock
+                                    FontSize="10"
+                                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                    Text="{Binding InstanceCountText}"
+                                    TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
                         </StackPanel>
                         <Grid Grid.Column="1" Padding="4,0">
                             <Rectangle

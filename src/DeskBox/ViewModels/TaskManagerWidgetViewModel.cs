@@ -40,7 +40,7 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
     private bool _isWindowVisible;
     private bool _isWindowRevealCompleted;
 
-    private string _sortColumn = "Disk";
+    private string _sortColumn = "Memory";
     private bool _sortDescending = true;
 
     [ObservableProperty]
@@ -123,9 +123,9 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
     // UserControl.Resources (WMC0060), so we expose computed properties
     // that the XAML binds to directly.
 
-    public Visibility CompactVisibility => IsCompactCollapsed ? Visibility.Collapsed : Visibility.Visible;
+    public Visibility CompactVisibility => IsCompactCollapsed ? Visibility.Visible : Visibility.Collapsed;
 
-    public Visibility ExpandedVisibility => IsCompactCollapsed ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility ExpandedVisibility => IsCompactCollapsed ? Visibility.Collapsed : Visibility.Visible;
 
     public string CpuSortGlyph => SortColumn == "CPU" ? (SortDescending ? "▼" : "▲") : string.Empty;
     public string MemorySortGlyph => SortColumn == "Memory" ? (SortDescending ? "▼" : "▲") : string.Empty;
@@ -136,6 +136,11 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
     public Visibility MemorySortIndicatorVisibility => SortColumn == "Memory" ? Visibility.Visible : Visibility.Collapsed;
     public Visibility DiskSortIndicatorVisibility => SortColumn == "Disk" ? Visibility.Visible : Visibility.Collapsed;
     public Visibility NetworkSortIndicatorVisibility => SortColumn == "Network" ? Visibility.Visible : Visibility.Collapsed;
+
+    public string CpuHeaderText => $"CPU {AggregateCpuPercent:0.#}%";
+    public string MemoryHeaderText => $"Memory {AggregateMemoryPercent:0.#}%";
+    public string DiskHeaderText => $"Disk {AggregateDiskPercent:0.#}%";
+    public string NetworkHeaderText => "Network";
 
     private void OnSortColumnChanged()
     {
@@ -329,6 +334,16 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
                 TimeSpan cpuTime = process.TotalProcessorTime;
                 long privateBytes = process.PrivateMemorySize64;
 
+                string? executablePath = null;
+                try
+                {
+                    executablePath = process.MainModule?.FileName;
+                }
+                catch
+                {
+                    // Access denied or 32-bit/64-bit mismatch — icon unavailable.
+                }
+
                 _previousCpuTimeByProcessId.TryGetValue(process.Id, out TimeSpan previousCpuTime);
                 _previousCpuTimeByProcessId[process.Id] = cpuTime;
 
@@ -347,6 +362,7 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
                 snapshots.Add(new ProcessSnapshot(
                     process.Id,
                     name,
+                    executablePath,
                     cpuTime,
                     privateBytes,
                     cpuPercent));
@@ -377,10 +393,11 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
                 g.Sum(s => s.CpuPercent),
                 g.Sum(s => s.PrivateBytes),
                 diskByName.TryGetValue(g.Key, out double value) ? value : 0d,
-                g.First().ProcessId))
+                g.First().ProcessId,
+                g.First().ExecutablePath))
             .ToList();
 
-        var ordered = ApplySortTo(groups);
+        var ordered = ApplySortTo(groups, _sortColumn, _sortDescending);
 
         double maxCpu = ordered.Count > 0 ? ordered.Max(g => g.CpuPercent) : 0;
         double maxMemory = ordered.Count > 0 ? ordered.Max(g => (double)g.MemoryBytes) : 1;
@@ -399,14 +416,33 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
             g.DiskBytesPerSecond,
             maxCpu,
             maxMemory,
-            maxDisk)).ToList();
+            maxDisk,
+            g.ExecutablePath is not null ? new Uri(g.ExecutablePath) : null)).ToList();
 
         UpdateCapsule(aggregateCpu, aggregateMemory, aggregateDisk, maxCpu, maxMemory, maxDisk);
 
         return new ObservableCollection<TaskManagerProcessRow>(rows);
     }
 
-    private static List<ProcessGroup> ApplySortTo(List<ProcessGroup> groups) => groups;
+    private static List<ProcessGroup> ApplySortTo(List<ProcessGroup> groups, string sortColumn, bool sortDescending)
+    {
+        return sortColumn switch
+        {
+            "Name" => sortDescending
+                ? groups.OrderByDescending(g => g.Name, StringComparer.OrdinalIgnoreCase).ToList()
+                : groups.OrderBy(g => g.Name, StringComparer.OrdinalIgnoreCase).ToList(),
+            "CPU" => sortDescending
+                ? groups.OrderByDescending(g => g.CpuPercent).ToList()
+                : groups.OrderBy(g => g.CpuPercent).ToList(),
+            "Memory" => sortDescending
+                ? groups.OrderByDescending(g => g.MemoryBytes).ToList()
+                : groups.OrderBy(g => g.MemoryBytes).ToList(),
+            "Disk" => sortDescending
+                ? groups.OrderByDescending(g => g.DiskBytesPerSecond).ToList()
+                : groups.OrderBy(g => g.DiskBytesPerSecond).ToList(),
+            _ => groups
+        };
+    }
 
     private void ApplySort()
     {
@@ -441,8 +477,12 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
             : aggregateCpu;
 
         double totalPhysicalMemory = ReadTotalPhysicalMemoryBytes();
+        double availablePhysicalMemory = ReadAvailablePhysicalMemoryBytes();
+        double memoryInUseBytes = totalPhysicalMemory > availablePhysicalMemory
+            ? totalPhysicalMemory - availablePhysicalMemory
+            : 0;
         AggregateMemoryPercent = totalPhysicalMemory > 0
-            ? Math.Clamp((double)aggregateMemoryBytes / totalPhysicalMemory * 100d, 0, 100)
+            ? Math.Clamp(memoryInUseBytes / totalPhysicalMemory * 100d, 0, 100)
             : 0;
 
         AggregateDiskPercent = maxDisk > 0
@@ -454,6 +494,10 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
             Math.Round(AggregateCpuPercent),
             Math.Round(AggregateMemoryPercent),
             Math.Round(AggregateDiskPercent));
+
+        OnPropertyChanged(nameof(CpuHeaderText));
+        OnPropertyChanged(nameof(MemoryHeaderText));
+        OnPropertyChanged(nameof(DiskHeaderText));
     }
 
     public void Dispose()
@@ -668,6 +712,24 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
         return 0;
     }
 
+    private static double ReadAvailablePhysicalMemoryBytes()
+    {
+        try
+        {
+            var status = new MemoryStatusEx { Length = (uint)Marshal.SizeOf<MemoryStatusEx>() };
+            if (GlobalMemoryStatusEx(out status))
+            {
+                return (double)status.AvailablePhysical;
+            }
+        }
+        catch
+        {
+            // Best effort.
+        }
+
+        return 0;
+    }
+
     private static DispatcherQueue? TryGetCurrentDispatcherQueue()
     {
         try
@@ -685,14 +747,16 @@ public sealed class ProcessSnapshot
 {
     public int ProcessId { get; }
     public string Name { get; }
+    public string? ExecutablePath { get; }
     public TimeSpan CpuTime { get; }
     public long PrivateBytes { get; }
     public double CpuPercent { get; }
 
-    public ProcessSnapshot(int processId, string name, TimeSpan cpuTime, long privateBytes, double cpuPercent)
+    public ProcessSnapshot(int processId, string name, string? executablePath, TimeSpan cpuTime, long privateBytes, double cpuPercent)
     {
         ProcessId = processId;
         Name = name;
+        ExecutablePath = executablePath;
         CpuTime = cpuTime;
         PrivateBytes = privateBytes;
         CpuPercent = cpuPercent;
@@ -708,6 +772,7 @@ public sealed class TaskManagerProcessRow
     public long MemoryBytes { get; }
     public double DiskBytesPerSecond { get; }
     public double NetworkBytesPerSecond { get; } // Phase 2: per-process network via ETW.
+    public Uri? IconUri { get; } // Executable icon, best effort.
 
     public string CpuText => $"{CpuPercent:0.#}%";
     public string MemoryText => MemoryBytes >= 1024L * 1024 * 1024
@@ -734,7 +799,8 @@ public sealed class TaskManagerProcessRow
         double diskBytesPerSecond,
         double maxCpu,
         double maxMemory,
-        double maxDisk)
+        double maxDisk,
+        Uri? iconUri = null)
     {
         RepresentativeProcessId = representativeProcessId;
         Name = name;
@@ -742,6 +808,7 @@ public sealed class TaskManagerProcessRow
         CpuPercent = cpuPercent;
         MemoryBytes = memoryBytes;
         DiskBytesPerSecond = diskBytesPerSecond;
+        IconUri = iconUri;
 
         CpuIntensity = maxCpu > 0 ? Math.Clamp(cpuPercent / maxCpu, 0d, 1d) : 0;
         MemoryIntensity = maxMemory > 0 ? Math.Clamp((double)memoryBytes / maxMemory, 0d, 1d) : 0;
@@ -755,4 +822,5 @@ internal sealed record ProcessGroup(
     double CpuPercent,
     long MemoryBytes,
     double DiskBytesPerSecond,
-    int RepresentativeId);
+    int RepresentativeId,
+    string? ExecutablePath);
