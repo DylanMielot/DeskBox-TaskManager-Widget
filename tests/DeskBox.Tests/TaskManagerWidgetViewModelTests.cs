@@ -115,4 +115,87 @@ public sealed class TaskManagerWidgetViewModelTests
 
         Assert.Equal(new[] { "aaa", "bbb", "ccc" }, vm.Rows.Select(r => r.Name).ToArray());
     }
+
+    [Theory]
+    [InlineData("System")]
+    [InlineData("Idle")]
+    [InlineData("Registry")]
+    [InlineData("smss")]
+    [InlineData("csrss")]
+    [InlineData("wininit")]
+    [InlineData("winlogon")]
+    [InlineData("services")]
+    [InlineData("lsass")]
+    [InlineData("dwm")]
+    [InlineData("deskbox")]
+    public void CanEndTask_ProtectedProcessName_ReturnsFalse(string name)
+    {
+        var vm = CreateVm();
+        var row = MakeRow(1, name, 0, 0);
+
+        Assert.False(vm.CanEndTask(row));
+    }
+
+    [Fact]
+    public void CanEndTask_NormalProcessName_ReturnsTrue()
+    {
+        var vm = CreateVm();
+        var row = MakeRow(1, "notepad", 0, 0);
+
+        Assert.True(vm.CanEndTask(row));
+    }
+
+    [Fact]
+    public void CanEndTask_NullRow_ReturnsFalse()
+    {
+        var vm = CreateVm();
+
+        Assert.False(vm.CanEndTask(null));
+    }
+
+    [Fact]
+    public void EndTask_NullRow_ReturnsFailedWithMessage()
+    {
+        var vm = CreateVm();
+
+        var outcome = vm.EndTask(null, out var message);
+
+        Assert.Equal(TaskManagerWidgetViewModel.EndTaskOutcome.Failed, outcome);
+        Assert.NotNull(message);
+    }
+
+    [Fact]
+    public void EndTask_ProtectedProcess_ReturnsProtectedAndNamesIt()
+    {
+        var vm = CreateVm();
+        var row = MakeRow(1, "System", 0, 0);
+
+        var outcome = vm.EndTask(row, out var message);
+
+        Assert.Equal(TaskManagerWidgetViewModel.EndTaskOutcome.Protected, outcome);
+        Assert.Contains("System", message!);
+    }
+
+    [Fact]
+    public void EndTask_NonexistentProcess_ReturnsAlreadyExited()
+    {
+        var vm = CreateVm();
+        var row = MakeRow(1, "__DeskBox_Nonexistent_Process__", 0, 0);
+
+        var outcome = vm.EndTask(row, out var message);
+
+        Assert.Equal(TaskManagerWidgetViewModel.EndTaskOutcome.AlreadyExited, outcome);
+        Assert.NotNull(message);
+    }
+
+    [Fact]
+    public void SelectedRow_DefaultsToNullAndCanBeSet()
+    {
+        var vm = CreateVm();
+        var row = MakeRow(1, "notepad", 0, 0);
+
+        Assert.Null(vm.SelectedRow);
+        vm.SelectedRow = row;
+        Assert.Same(row, vm.SelectedRow);
+    }
 }

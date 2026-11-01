@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -45,6 +46,15 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
 
     [ObservableProperty]
     private ObservableCollection<TaskManagerProcessRow> _rows = [];
+
+    private TaskManagerProcessRow? _selectedRow;
+
+    /// <summary>Currently selected process row (null when none).</summary>
+    public TaskManagerProcessRow? SelectedRow
+    {
+        get => _selectedRow;
+        set => SetProperty(ref _selectedRow, value);
+    }
 
     [ObservableProperty]
     private string _capsuleSummary = string.Empty;
@@ -143,6 +153,9 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
     public string MemoryHeaderText => $"Memory {AggregateMemoryPercent:0.#}%";
     public string DiskHeaderText => $"Disk {AggregateDiskPercent:0.#}%";
     public string NetworkHeaderText => "Network";
+
+    /// <summary>Localized label for the "Terminer la tâche" context-menu item.</summary>
+    public string EndTaskText => _localizationService.T("TaskManager.EndTask");
 
     private void OnSortColumnChanged()
     {
@@ -471,6 +484,147 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
         };
 
         Rows = new ObservableCollection<TaskManagerProcessRow>(sorted);
+    }
+
+    // ─── Fin de tâche (M4) ───
+
+    /// <summary>Outcome of <see cref="EndTask"/>.</summary>
+    public enum EndTaskOutcome
+    {
+        Success,
+        Protected,
+        AccessDenied,
+        AlreadyExited,
+        Failed
+    }
+
+    /// <summary>Process names that can never be ended or restarted from the widget.</summary>
+    private static readonly HashSet<string> s_protectedProcessNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "System", "Idle", "Registry", "smss", "csrss", "wininit", "winlogon",
+        "services", "lsass", "dwm", "deskbox"
+    };
+
+    /// <summary>Whether the given row's process group is allowed to be ended.</summary>
+    public bool CanEndTask(TaskManagerProcessRow? row) =>
+        row is not null && !IsProtectedProcessName(row.Name);
+
+    /// <summary>
+    /// Ends every process in the given row's group (like the Task Manager
+    /// "Terminer la tâche"). A polite window close is attempted before a hard
+    /// kill; protected and inaccessible processes are skipped.
+    /// </summary>
+    /// <returns>The outcome and a localized user-facing message.</returns>
+    public EndTaskOutcome EndTask(TaskManagerProcessRow? row, out string? message)
+    {
+        message = null;
+        if (row is null)
+        {
+            message = _localizationService.T("TaskManager.EndTask.ErrorUnknown");
+            return EndTaskOutcome.Failed;
+        }
+
+        if (IsProtectedProcessName(row.Name))
+        {
+            message = _localizationService.Format("TaskManager.EndTask.Protected", row.Name);
+            return EndTaskOutcome.Protected;
+        }
+
+        bool terminated = false;
+        bool accessDenied = false;
+        bool found = false;
+
+        Process[] processes;
+        try
+        {
+            processes = Process.GetProcessesByName(row.Name);
+        }
+        catch
+        {
+            processes = Array.Empty<Process>();
+        }
+
+        foreach (var process in processes)
+        {
+            found = true;
+            try
+            {
+                if (IsProtectedProcessInstance(process))
+                {
+                    continue;
+                }
+
+                // Fermer poliment d'abord lorsque le processus possède une fenêtre.
+                if (!process.HasExited && process.MainWindowHandle != IntPtr.Zero)
+                {
+                    process.CloseMainWindow();
+                    process.Refresh();
+                }
+
+                if (!process.HasExited)
+                {
+                    process.Kill();
+                    process.Refresh();
+                    terminated = true;
+                }
+            }
+            catch (Win32Exception ex) when (ex.NativeErrorCode == 5)
+            {
+                // Accès refusé (processus élevé ou protégé).
+                accessDenied = true;
+            }
+            catch (InvalidOperationException)
+            {
+                // Déjà quitté.
+            }
+            catch
+            {
+                // Processus illisible — on l'ignore.
+            }
+            finally
+            {
+                process.Dispose();
+            }
+        }
+
+        if (!found)
+        {
+            message = _localizationService.T("TaskManager.EndTask.AlreadyExited");
+            return EndTaskOutcome.AlreadyExited;
+        }
+
+        if (!terminated && accessDenied)
+        {
+            message = _localizationService.Format("TaskManager.EndTask.AccessDenied", row.Name);
+            return EndTaskOutcome.AccessDenied;
+        }
+
+        if (!terminated)
+        {
+            message = _localizationService.T("TaskManager.EndTask.NothingToDo");
+            return EndTaskOutcome.Failed;
+        }
+
+        message = _localizationService.Format("TaskManager.EndTask.Success", row.Name);
+        return EndTaskOutcome.Success;
+    }
+
+    private static bool IsProtectedProcessName(string name) =>
+        s_protectedProcessNames.Contains(name);
+
+    private static bool IsProtectedProcessInstance(Process process)
+    {
+        try
+        {
+            // Les processus système refusent souvent l'accès à MainModule.
+            _ = process.MainModule;
+            return false;
+        }
+        catch
+        {
+            // Traité comme protégé par défaut (prudence).
+            return true;
+        }
     }
 
     private void UpdateCapsule(double aggregateCpu, long aggregateMemoryBytes, double aggregateDiskBytesPerSecond,

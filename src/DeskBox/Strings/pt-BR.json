@@ -2999,6 +2999,15 @@
   "TaskManager.Column.Disk": "Disk",
   "TaskManager.Column.Network": "Network",
   "TaskManager.CapsuleSummary": "CPU {0}% · Memory {1}% · Disk {2}%",
+  "TaskManager.EndTask": "End task",
+  "TaskManager.EndTask.Title": "End task",
+  "TaskManager.EndTask.Confirm": "End task « {0} » ({1} processes)?",
+  "TaskManager.EndTask.PrimaryButton": "End task",
+  "TaskManager.EndTask.Protected": "« {0} » is protected and cannot be ended.",
+  "TaskManager.EndTask.AccessDenied": "Access denied: unable to end task « {0} ».",
+  "TaskManager.EndTask.AlreadyExited": "The process « {0} » no longer exists.",
+  "TaskManager.EndTask.NothingToDo": "No process could be ended.",
+  "TaskManager.EndTask.ErrorUnknown": "An error occurred.",
   "WidgetContent.TaskManager.StatusLabel": "Implemented",
   "WidgetContent.TaskManager.StatusDescription": "Process list with CPU, memory, disk and network"
 }

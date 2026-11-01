@@ -1,9 +1,13 @@
 using DeskBox.Contracts;
+using DeskBox.Services;
 using DeskBox.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Data;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Markup;
+using System.Threading.Tasks;
 
 namespace DeskBox.Controls.WidgetContents;
 
@@ -29,6 +33,8 @@ public sealed partial class TaskManagerWidgetContent : UserControl, IWidgetRespo
         set => DataContext = value;
     }
 
+    private TaskManagerProcessRow? _contextMenuRow;
+
     private void NameHeader_Click(object sender, RoutedEventArgs e) => SetSort("Name");
     private void CpuHeader_Click(object sender, RoutedEventArgs e) => SetSort("CPU");
     private void MemoryHeader_Click(object sender, RoutedEventArgs e) => SetSort("Memory");
@@ -52,6 +58,96 @@ public sealed partial class TaskManagerWidgetContent : UserControl, IWidgetRespo
             // Numeric columns default to descending; Name defaults to ascending.
             vm.SortDescending = !string.Equals(column, "Name", StringComparison.Ordinal);
         }
+    }
+
+    private void ProcessRow_RightTapped(object sender, RightTappedRoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement element || element.DataContext is not TaskManagerProcessRow row)
+        {
+            return;
+        }
+
+        ViewModel.SelectedRow = row;
+        _contextMenuRow = row;
+
+        var flyout = new MenuFlyout();
+        var endItem = new MenuFlyoutItem
+        {
+            Text = Localized.T("TaskManager.EndTask"),
+        };
+        endItem.Click += EndTaskMenuItem_Click;
+        flyout.Items.Add(endItem);
+
+        flyout.ShowAt(element, new FlyoutShowOptions { Placement = FlyoutPlacementMode.Right });
+        e.Handled = true;
+    }
+
+    private async void EndTaskMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        var row = _contextMenuRow;
+        _contextMenuRow = null;
+        if (row is null)
+        {
+            return;
+        }
+
+        var vm = ViewModel;
+        if (vm is null || !vm.CanEndTask(row))
+        {
+            return;
+        }
+
+        bool confirmed = await ConfirmEndTaskAsync(row);
+        if (!confirmed)
+        {
+            return;
+        }
+
+        var outcome = vm.EndTask(row, out var message);
+        if (outcome == TaskManagerWidgetViewModel.EndTaskOutcome.Success)
+        {
+            _ = vm.RefreshAsync();
+            return;
+        }
+
+        await ShowMessageAsync(
+            Localized.T("TaskManager.EndTask.Title"),
+            message ?? Localized.T("TaskManager.EndTask.ErrorUnknown"));
+    }
+
+    private async Task<bool> ConfirmEndTaskAsync(TaskManagerProcessRow row)
+    {
+        var dialog = new ContentDialog
+        {
+            XamlRoot = this.XamlRoot,
+            Title = Localized.T("TaskManager.EndTask.Title"),
+            Content = new TextBlock
+            {
+                Text = string.Format(
+                    Localized.T("TaskManager.EndTask.Confirm"),
+                    row.Name,
+                    row.InstanceCount),
+                TextWrapping = TextWrapping.Wrap,
+                MaxWidth = 480
+            },
+            PrimaryButtonText = Localized.T("TaskManager.EndTask.PrimaryButton"),
+            CloseButtonText = Localized.T("Common.Close"),
+            DefaultButton = ContentDialogButton.Close,
+        };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+    }
+
+    private async Task ShowMessageAsync(string title, string message)
+    {
+        var dialog = new ContentDialog
+        {
+            XamlRoot = this.XamlRoot,
+            Title = title,
+            Content = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, MaxWidth = 480 },
+            CloseButtonText = Localized.T("Common.Close"),
+            DefaultButton = ContentDialogButton.Close,
+        };
+        await dialog.ShowAsync();
     }
 
     // IWidgetResponsiveLayoutContent — the task manager surface has no animated

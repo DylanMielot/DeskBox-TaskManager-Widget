@@ -2999,6 +2999,15 @@
   "TaskManager.Column.Disk": "Disk",
   "TaskManager.Column.Network": "Network",
   "TaskManager.CapsuleSummary": "CPU {0}% · Memory {1}% · Disk {2}%",
+  "TaskManager.EndTask": "Terminer la tâche",
+  "TaskManager.EndTask.Title": "Terminer la tâche",
+  "TaskManager.EndTask.Confirm": "Voulez-vous terminer « {0} » ({1} processus) ?",
+  "TaskManager.EndTask.PrimaryButton": "Terminer",
+  "TaskManager.EndTask.Protected": "« {0} » est protégé et ne peut pas être terminé.",
+  "TaskManager.EndTask.AccessDenied": "Accès refusé : impossible de terminer « {0} ».",
+  "TaskManager.EndTask.AlreadyExited": "Le processus « {0} » n'existe plus.",
+  "TaskManager.EndTask.NothingToDo": "Aucun processus n'a pu être terminé.",
+  "TaskManager.EndTask.ErrorUnknown": "Une erreur est survenue.",
   "WidgetContent.TaskManager.StatusLabel": "Implemented",
   "WidgetContent.TaskManager.StatusDescription": "Process list with CPU, memory, disk and network"
 }

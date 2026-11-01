@@ -143,6 +143,8 @@
             x:Name="ProcessList"
             Grid.ColumnSpan="5"
             ItemsSource="{Binding Rows, Mode=OneWay}"
+            SelectionMode="Single"
+            SelectedItem="{Binding SelectedRow, Mode=TwoWay}"
             Visibility="{Binding ExpandedVisibility}">
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">
@@ -155,7 +157,7 @@
             </ListView.ItemContainerStyle>
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="viewModels:TaskManagerProcessRow">
-                    <Grid ColumnSpacing="0">
+                    <Grid ColumnSpacing="0" RightTapped="ProcessRow_RightTapped">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="160" />
                             <ColumnDefinition Width="60" />
