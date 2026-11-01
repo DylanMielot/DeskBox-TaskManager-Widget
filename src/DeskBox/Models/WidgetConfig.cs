@@ -288,7 +288,10 @@ public enum WidgetKind
     Productivity,
 
     /// <summary>At-a-glance background, time and date widget.</summary>
-    Glance
+    Glance,
+
+    /// <summary>Task Manager widget listing running processes with CPU, memory, disk and network.</summary>
+    TaskManager
 }
 
 /// <summary>

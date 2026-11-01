@@ -2991,5 +2991,14 @@
   "Widget.UnlockSize": "إلغاء قفل الحجم",
   "Widget.Shell.Collapse": "طي القطعة",
   "Todo.Due.Custom.Time": "وقت مخصص",
-  "Todo.Detail.EditStep": "تحرير الخطوة"
+  "Todo.Detail.EditStep": "تحرير الخطوة",
+  "TaskManager.Title": "Task Manager",
+  "TaskManager.Column.Name": "Name",
+  "TaskManager.Column.CPU": "CPU",
+  "TaskManager.Column.Memory": "Memory",
+  "TaskManager.Column.Disk": "Disk",
+  "TaskManager.Column.Network": "Network",
+  "TaskManager.CapsuleSummary": "CPU {0}% · Memory {1}% · Disk {2}%",
+  "WidgetContent.TaskManager.StatusLabel": "Implemented",
+  "WidgetContent.TaskManager.StatusDescription": "Process list with CPU, memory, disk and network"
 }

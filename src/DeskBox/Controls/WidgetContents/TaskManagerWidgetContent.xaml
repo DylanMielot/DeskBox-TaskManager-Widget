@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="DeskBox.Controls.WidgetContents.TaskManagerWidgetContent"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:DeskBox.Controls.WidgetContents"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewModels="using:DeskBox.ViewModels"
+    d:DataContext="{d:DesignInstance viewModels:TaskManagerWidgetViewModel}"
+    Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+    mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <Style
+            x:Key="TaskManagerHeaderButtonStyle"
+            TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="UseSystemFocusVisuals" Value="True" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid
+        x:Name="RootGrid">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="160" />
+            <ColumnDefinition Width="60" />
+            <ColumnDefinition Width="80" />
+            <ColumnDefinition Width="80" />
+            <ColumnDefinition Width="55" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Capsule summary: shown when the widget is collapsed to its capsule. -->
+        <Border
+            Grid.ColumnSpan="5"
+            Padding="10,6,10,4"
+            Background="{ThemeResource LayerFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource WidgetLayerStrokeBrush}"
+            BorderThickness="0,0,0,1"
+            Visibility="{Binding CompactVisibility}">
+            <TextBlock
+                FontSize="11"
+                FontWeight="SemiBold"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Text="{Binding CapsuleSummary}"
+                TextTrimming="CharacterEllipsis"
+                TextWrapping="NoWrap" />
+        </Border>
+
+        <!-- Header row: clickable, sortable column titles. -->
+        <Grid
+            Grid.ColumnSpan="5"
+            Padding="10,4,10,2"
+            BorderBrush="{ThemeResource WidgetLayerStrokeBrush}"
+            BorderThickness="0,0,0,1"
+            Background="{ThemeResource LayerFillColorDefaultBrush}"
+            Visibility="{Binding ExpandedVisibility}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="160" />
+                <ColumnDefinition Width="60" />
+                <ColumnDefinition Width="80" />
+                <ColumnDefinition Width="80" />
+                <ColumnDefinition Width="55" />
+            </Grid.ColumnDefinitions>
+            <Button
+                Grid.Column="0"
+                Content="Name"
+                Click="NameHeader_Click"
+                Style="{StaticResource TaskManagerHeaderButtonStyle}"
+                ToolTipService.ToolTip="Sort by name" />
+            <Button
+                Grid.Column="1"
+                Click="CpuHeader_Click"
+                Style="{StaticResource TaskManagerHeaderButtonStyle}"
+                ToolTipService.ToolTip="Sort by CPU">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBlock Text="CPU" />
+                    <TextBlock
+                        FontSize="10"
+                        Text="{Binding CpuSortGlyph}"
+                        Visibility="{Binding CpuSortIndicatorVisibility}" />
+                </StackPanel>
+            </Button>
+            <Button
+                Grid.Column="2"
+                Click="MemoryHeader_Click"
+                Style="{StaticResource TaskManagerHeaderButtonStyle}"
+                ToolTipService.ToolTip="Sort by memory">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBlock Text="Memory" />
+                    <TextBlock
+                        FontSize="10"
+                        Text="{Binding MemorySortGlyph}"
+                        Visibility="{Binding MemorySortIndicatorVisibility}" />
+                </StackPanel>
+            </Button>
+            <Button
+                Grid.Column="3"
+                Click="DiskHeader_Click"
+                Style="{StaticResource TaskManagerHeaderButtonStyle}"
+                ToolTipService.ToolTip="Sort by disk">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBlock Text="Disk" />
+                    <TextBlock
+                        FontSize="10"
+                        Text="{Binding DiskSortGlyph}"
+                        Visibility="{Binding DiskSortIndicatorVisibility}" />
+                </StackPanel>
+            </Button>
+            <Button
+                Grid.Column="4"
+                Click="NetworkHeader_Click"
+                Style="{StaticResource TaskManagerHeaderButtonStyle}"
+                ToolTipService.ToolTip="Sort by network">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBlock Text="Network" />
+                    <TextBlock
+                        FontSize="10"
+                        Text="{Binding NetworkSortGlyph}"
+                        Visibility="{Binding NetworkSortIndicatorVisibility}" />
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <!-- Process table: one row per executable group, blue-tinted intensity cells. -->
+        <ListView
+            x:Name="ProcessList"
+            Grid.ColumnSpan="5"
+            ItemsSource="{Binding Rows, Mode=OneWay}"
+            Visibility="{Binding ExpandedVisibility}">
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="Margin" Value="0" />
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    <Setter Property="MinHeight" Value="26" />
+                    <Setter Property="Background" Value="Transparent" />
+                </Style>
+            </ListView.ItemContainerStyle>
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="viewModels:TaskManagerProcessRow">
+                    <Grid ColumnSpacing="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="160" />
+                            <ColumnDefinition Width="60" />
+                            <ColumnDefinition Width="80" />
+                            <ColumnDefinition Width="80" />
+                            <ColumnDefinition Width="55" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel
+                            Grid.Column="0"
+                            Spacing="2">
+                            <TextBlock
+                                FontWeight="SemiBold"
+                                Text="{Binding Name}"
+                                TextTrimming="CharacterEllipsis"
+                                TextWrapping="NoWrap" />
+                            <TextBlock
+                                FontSize="10"
+                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                Text="{Binding InstanceCountText}"
+                                TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <Grid Grid.Column="1" Padding="4,0">
+                            <Rectangle
+                                Fill="{ThemeResource AccentFillColorDefaultBrush}"
+                                IsHitTestVisible="False"
+                                Opacity="{Binding CpuIntensity}" />
+                            <TextBlock
+                                HorizontalAlignment="Right"
+                                Text="{Binding CpuText}" />
+                        </Grid>
+                        <Grid Grid.Column="2" Padding="4,0">
+                            <Rectangle
+                                Fill="{ThemeResource AccentFillColorDefaultBrush}"
+                                IsHitTestVisible="False"
+                                Opacity="{Binding MemoryIntensity}" />
+                            <TextBlock
+                                HorizontalAlignment="Right"
+                                Text="{Binding MemoryText}" />
+                        </Grid>
+                        <Grid Grid.Column="3" Padding="4,0">
+                            <Rectangle
+                                Fill="{ThemeResource AccentFillColorDefaultBrush}"
+                                IsHitTestVisible="False"
+                                Opacity="{Binding DiskIntensity}" />
+                            <TextBlock
+                                HorizontalAlignment="Right"
+                                Text="{Binding DiskText}" />
+                        </Grid>
+                        <TextBlock
+                            Grid.Column="4"
+                            HorizontalAlignment="Right"
+                            Text="{Binding NetworkText}" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</UserControl>
