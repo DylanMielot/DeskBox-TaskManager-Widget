@@ -38,10 +38,9 @@
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="75" />
-            <ColumnDefinition Width="100" />
-            <ColumnDefinition Width="100" />
-            <ColumnDefinition Width="65" />
+            <ColumnDefinition Width="95" />
+            <ColumnDefinition Width="130" />
+            <ColumnDefinition Width="130" />
         </Grid.ColumnDefinitions>
 
         <!-- Capsule summary: shown when the widget is collapsed to its capsule. -->
@@ -130,19 +129,6 @@
                         Visibility="{Binding DiskSortIndicatorVisibility}" />
                 </StackPanel>
             </Button>
-            <Button
-                Grid.Column="4"
-                Click="NetworkHeader_Click"
-                Style="{StaticResource TaskManagerHeaderButtonStyle}"
-                ToolTipService.ToolTip="Sort by network">
-                <StackPanel Orientation="Horizontal" Spacing="4">
-                    <TextBlock Text="{Binding NetworkHeaderText}" />
-                    <TextBlock
-                        FontSize="10"
-                        Text="{Binding NetworkSortGlyph}"
-                        Visibility="{Binding NetworkSortIndicatorVisibility}" />
-                </StackPanel>
-            </Button>
         </Grid>
 
         <!-- Process table: one row per executable group, blue-tinted intensity cells. -->
@@ -222,10 +208,6 @@
                                 HorizontalAlignment="Right"
                                 Text="{Binding DiskText}" />
                         </Grid>
-                        <TextBlock
-                            Grid.Column="4"
-                            HorizontalAlignment="Right"
-                            Text="{Binding NetworkText}" />
                     </Grid>
                 </DataTemplate>
             </ListView.ItemTemplate>

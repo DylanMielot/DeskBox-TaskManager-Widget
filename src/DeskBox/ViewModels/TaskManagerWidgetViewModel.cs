@@ -142,18 +142,15 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
     public string CpuSortGlyph => SortColumn == "CPU" ? (SortDescending ? "▼" : "▲") : string.Empty;
     public string MemorySortGlyph => SortColumn == "Memory" ? (SortDescending ? "▼" : "▲") : string.Empty;
     public string DiskSortGlyph => SortColumn == "Disk" ? (SortDescending ? "▼" : "▲") : string.Empty;
-    public string NetworkSortGlyph => SortColumn == "Network" ? (SortDescending ? "▼" : "▲") : string.Empty;
 
     public Visibility NameSortIndicatorVisibility => SortColumn == "Name" ? Visibility.Visible : Visibility.Collapsed;
     public Visibility CpuSortIndicatorVisibility => SortColumn == "CPU" ? Visibility.Visible : Visibility.Collapsed;
     public Visibility MemorySortIndicatorVisibility => SortColumn == "Memory" ? Visibility.Visible : Visibility.Collapsed;
     public Visibility DiskSortIndicatorVisibility => SortColumn == "Disk" ? Visibility.Visible : Visibility.Collapsed;
-    public Visibility NetworkSortIndicatorVisibility => SortColumn == "Network" ? Visibility.Visible : Visibility.Collapsed;
 
     public string CpuHeaderText => $"CPU {AggregateCpuPercent:0.#}%";
     public string MemoryHeaderText => $"Memory {AggregateMemoryPercent:0.#}%";
     public string DiskHeaderText => $"Disk {AggregateDiskPercent:0.#}%";
-    public string NetworkHeaderText => "Network";
 
     /// <summary>Localized label for the "Terminer la tâche" context-menu item.</summary>
     public string EndTaskText => _localizationService.T("TaskManager.EndTask");
@@ -167,12 +164,10 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
         OnPropertyChanged(nameof(CpuSortGlyph));
         OnPropertyChanged(nameof(MemorySortGlyph));
         OnPropertyChanged(nameof(DiskSortGlyph));
-        OnPropertyChanged(nameof(NetworkSortGlyph));
         OnPropertyChanged(nameof(NameSortIndicatorVisibility));
         OnPropertyChanged(nameof(CpuSortIndicatorVisibility));
         OnPropertyChanged(nameof(MemorySortIndicatorVisibility));
         OnPropertyChanged(nameof(DiskSortIndicatorVisibility));
-        OnPropertyChanged(nameof(NetworkSortIndicatorVisibility));
     }
 
     private void OnSortDirectionChanged()
@@ -181,7 +176,6 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
         OnPropertyChanged(nameof(CpuSortGlyph));
         OnPropertyChanged(nameof(MemorySortGlyph));
         OnPropertyChanged(nameof(DiskSortGlyph));
-        OnPropertyChanged(nameof(NetworkSortGlyph));
     }
 
     public void ApplyAppearance()
@@ -360,18 +354,33 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
         }
     }
 
-    private void RebuildRowsInPlace(ObservableCollection<TaskManagerProcessRow> rows, int? selectedProcessId)
+    private void RebuildRowsInPlace(List<TaskManagerProcessRow> newRows, int? selectedProcessId)
     {
         Refreshing?.Invoke(this, EventArgs.Empty);
 
-        Rows.Clear();
-        foreach (var row in rows)
+        // Supprime uniquement les processus qui ont disparu (par la fin pour garder les indices valides).
+        while (Rows.Count > newRows.Count)
         {
-            Rows.Add(row);
+            Rows.RemoveAt(Rows.Count - 1);
         }
 
-        // Restore selection by process identity (the previous SelectedRow reference
-        // is orphaned because BuildRows creates new row instances).
+        // Met à jour ou insère chaque ligne à sa position triée. Les conteneurs
+        // existants sont réutilisés (Replace) : pas de Reset, pas de démontage, pas
+        // d'animation "du bas en haut", donc pas de flash.
+        for (int i = 0; i < newRows.Count; i++)
+        {
+            if (i < Rows.Count)
+            {
+                Rows[i] = newRows[i]; // Replace : conteneur réutilisé, binding mis à jour
+            }
+            else
+            {
+                Rows.Insert(i, newRows[i]); // nouveau processus
+            }
+        }
+
+        // Restaure la sélection par identité (le précédent SelectedRow est orphelin car
+        // BuildRows fabrique de nouvelles instances à chaque rafraîchissement).
         if (selectedProcessId is not null)
         {
             SelectedRow = Rows.FirstOrDefault(r => r.RepresentativeProcessId == selectedProcessId.Value);
@@ -449,7 +458,7 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
         return snapshots;
     }
 
-    private ObservableCollection<TaskManagerProcessRow> BuildRows(List<ProcessSnapshot> snapshots)
+    private List<TaskManagerProcessRow> BuildRows(List<ProcessSnapshot> snapshots)
     {
         var diskByName = ReadDiskBytesPerSecondByProcessName();
 
@@ -489,7 +498,7 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
 
         UpdateCapsule(aggregateCpu, aggregateMemory, aggregateDisk, maxCpu, maxMemory, maxDisk);
 
-        return new ObservableCollection<TaskManagerProcessRow>(rows);
+        return rows;
     }
 
     private static List<ProcessGroup> ApplySortTo(List<ProcessGroup> groups, string sortColumn, bool sortDescending)
@@ -528,9 +537,6 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
             "Disk" => _sortDescending
                 ? _rows.OrderByDescending(r => r.DiskBytesPerSecond)
                 : _rows.OrderBy(r => r.DiskBytesPerSecond),
-            "Network" => _sortDescending
-                ? _rows.OrderByDescending(r => r.NetworkBytesPerSecond)
-                : _rows.OrderBy(r => r.NetworkBytesPerSecond),
             _ => _rows
         };
 
@@ -1153,7 +1159,6 @@ public sealed class TaskManagerProcessRow
     public double CpuPercent { get; }
     public long MemoryBytes { get; }
     public double DiskBytesPerSecond { get; }
-    public double NetworkBytesPerSecond { get; } // Phase 2: per-process network via ETW.
     public Uri? IconUri { get; } // Executable icon, best effort.
 
     public string CpuText => $"{CpuPercent:0.#}%";
@@ -1163,14 +1168,12 @@ public sealed class TaskManagerProcessRow
     public string DiskText => DiskBytesPerSecond >= 1024 * 1024
         ? $"{DiskBytesPerSecond / (1024 * 1024):0.#} MB/s"
         : $"{DiskBytesPerSecond:0.#} B/s";
-    public string NetworkText => "-"; // Per-process network deferred to Phase 2 (ETW).
 
     public string InstanceCountText => InstanceCount == 1 ? "1 process" : $"{InstanceCount} processes";
 
     public double CpuIntensity { get; }
     public double MemoryIntensity { get; }
     public double DiskIntensity { get; }
-    public double NetworkIntensity => 0;
 
     public TaskManagerProcessRow(
         int representativeProcessId,

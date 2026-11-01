@@ -103,7 +103,6 @@ public sealed class TaskManagerWidgetViewModelTests
         Assert.Equal("CPU 0%", vm.CpuHeaderText);
         Assert.Equal("Memory 0%", vm.MemoryHeaderText);
         Assert.Equal("Disk 0%", vm.DiskHeaderText);
-        Assert.Equal("Network", vm.NetworkHeaderText);
     }
 
     [Fact]

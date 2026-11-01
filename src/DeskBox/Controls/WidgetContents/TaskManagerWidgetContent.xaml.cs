@@ -107,7 +107,6 @@ public sealed partial class TaskManagerWidgetContent : UserControl, IWidgetRespo
     private void CpuHeader_Click(object sender, RoutedEventArgs e) => SetSort("CPU");
     private void MemoryHeader_Click(object sender, RoutedEventArgs e) => SetSort("Memory");
     private void DiskHeader_Click(object sender, RoutedEventArgs e) => SetSort("Disk");
-    private void NetworkHeader_Click(object sender, RoutedEventArgs e) => SetSort("Network");
 
     private void SetSort(string column)
     {
