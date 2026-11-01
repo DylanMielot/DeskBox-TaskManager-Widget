@@ -73,10 +73,17 @@
             </Grid.ColumnDefinitions>
             <Button
                 Grid.Column="0"
-                Content="Name"
                 Click="NameHeader_Click"
                 Style="{StaticResource TaskManagerHeaderButtonStyle}"
-                ToolTipService.ToolTip="Sort by name" />
+                ToolTipService.ToolTip="Sort by name">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBlock Text="Name" />
+                    <TextBlock
+                        FontSize="10"
+                        Text="{Binding NameSortGlyph}"
+                        Visibility="{Binding NameSortIndicatorVisibility}" />
+                </StackPanel>
+            </Button>
             <Button
                 Grid.Column="1"
                 Click="CpuHeader_Click"

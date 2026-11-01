@@ -127,11 +127,13 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
 
     public Visibility ExpandedVisibility => IsCompactCollapsed ? Visibility.Collapsed : Visibility.Visible;
 
+    public string NameSortGlyph => SortColumn == "Name" ? (SortDescending ? "▼" : "▲") : string.Empty;
     public string CpuSortGlyph => SortColumn == "CPU" ? (SortDescending ? "▼" : "▲") : string.Empty;
     public string MemorySortGlyph => SortColumn == "Memory" ? (SortDescending ? "▼" : "▲") : string.Empty;
     public string DiskSortGlyph => SortColumn == "Disk" ? (SortDescending ? "▼" : "▲") : string.Empty;
     public string NetworkSortGlyph => SortColumn == "Network" ? (SortDescending ? "▼" : "▲") : string.Empty;
 
+    public Visibility NameSortIndicatorVisibility => SortColumn == "Name" ? Visibility.Visible : Visibility.Collapsed;
     public Visibility CpuSortIndicatorVisibility => SortColumn == "CPU" ? Visibility.Visible : Visibility.Collapsed;
     public Visibility MemorySortIndicatorVisibility => SortColumn == "Memory" ? Visibility.Visible : Visibility.Collapsed;
     public Visibility DiskSortIndicatorVisibility => SortColumn == "Disk" ? Visibility.Visible : Visibility.Collapsed;
@@ -144,10 +146,12 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
 
     private void OnSortColumnChanged()
     {
+        OnPropertyChanged(nameof(NameSortGlyph));
         OnPropertyChanged(nameof(CpuSortGlyph));
         OnPropertyChanged(nameof(MemorySortGlyph));
         OnPropertyChanged(nameof(DiskSortGlyph));
         OnPropertyChanged(nameof(NetworkSortGlyph));
+        OnPropertyChanged(nameof(NameSortIndicatorVisibility));
         OnPropertyChanged(nameof(CpuSortIndicatorVisibility));
         OnPropertyChanged(nameof(MemorySortIndicatorVisibility));
         OnPropertyChanged(nameof(DiskSortIndicatorVisibility));
