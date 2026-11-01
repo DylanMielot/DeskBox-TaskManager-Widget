@@ -31,8 +31,13 @@
 
     <Grid
         x:Name="RootGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="160" />
+            <ColumnDefinition Width="*" />
             <ColumnDefinition Width="60" />
             <ColumnDefinition Width="80" />
             <ColumnDefinition Width="80" />
@@ -41,6 +46,7 @@
 
         <!-- Capsule summary: shown when the widget is collapsed to its capsule. -->
         <Border
+            Grid.Row="0"
             Grid.ColumnSpan="5"
             Padding="10,6,10,4"
             Background="{ThemeResource LayerFillColorDefaultBrush}"
@@ -58,6 +64,7 @@
 
         <!-- Header row: clickable, sortable column titles. -->
         <Grid
+            Grid.Row="1"
             Grid.ColumnSpan="5"
             Padding="10,4,10,2"
             BorderBrush="{ThemeResource WidgetLayerStrokeBrush}"
@@ -65,7 +72,7 @@
             Background="{ThemeResource LayerFillColorDefaultBrush}"
             Visibility="{Binding ExpandedVisibility}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="160" />
+                <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="60" />
                 <ColumnDefinition Width="80" />
                 <ColumnDefinition Width="80" />
@@ -141,6 +148,7 @@
         <!-- Process table: one row per executable group, blue-tinted intensity cells. -->
         <ListView
             x:Name="ProcessList"
+            Grid.Row="2"
             Grid.ColumnSpan="5"
             ItemsSource="{Binding Rows, Mode=OneWay}"
             SelectionMode="Single"
@@ -159,7 +167,7 @@
                 <DataTemplate x:DataType="viewModels:TaskManagerProcessRow">
                     <Grid ColumnSpacing="0" RightTapped="ProcessRow_RightTapped">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="160" />
+                            <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="60" />
                             <ColumnDefinition Width="80" />
                             <ColumnDefinition Width="80" />

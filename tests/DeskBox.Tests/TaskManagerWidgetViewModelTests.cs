@@ -34,16 +34,16 @@ public sealed class TaskManagerWidgetViewModelTests
     }
 
     [Fact]
-    public void DefaultSort_IsMemoryDescending()
+    public void DefaultSort_IsCpuDescending()
     {
         var vm = CreateVm();
 
-        Assert.Equal("Memory", vm.SortColumn);
+        Assert.Equal("CPU", vm.SortColumn);
         Assert.True(vm.SortDescending);
-        Assert.Equal("▼", vm.MemorySortGlyph);
-        Assert.Equal(string.Empty, vm.CpuSortGlyph);
-        Assert.Equal(Visibility.Visible, vm.MemorySortIndicatorVisibility);
-        Assert.Equal(Visibility.Collapsed, vm.CpuSortIndicatorVisibility);
+        Assert.Equal("▼", vm.CpuSortGlyph);
+        Assert.Equal(string.Empty, vm.MemorySortGlyph);
+        Assert.Equal(Visibility.Visible, vm.CpuSortIndicatorVisibility);
+        Assert.Equal(Visibility.Collapsed, vm.MemorySortIndicatorVisibility);
     }
 
     [Fact]
@@ -94,6 +94,9 @@ public sealed class TaskManagerWidgetViewModelTests
             MakeRow(3, "ccc", 30, 300),
         };
 
+        // Default sort is already CPU-descending; force a column change so
+        // ApplySort actually re-runs when switching to CPU.
+        vm.SortColumn = "Memory";
         vm.SortColumn = "CPU";
 
         Assert.Equal(new[] { "bbb", "ccc", "aaa" }, vm.Rows.Select(r => r.Name).ToArray());

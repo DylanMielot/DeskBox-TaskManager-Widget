@@ -41,7 +41,7 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
     private bool _isWindowVisible;
     private bool _isWindowRevealCompleted;
 
-    private string _sortColumn = "Memory";
+    private string _sortColumn = "CPU";
     private bool _sortDescending = true;
 
     [ObservableProperty]
