@@ -781,7 +781,7 @@ public sealed class TaskManagerProcessRow
     public string DiskText => DiskBytesPerSecond >= 1024 * 1024
         ? $"{DiskBytesPerSecond / (1024 * 1024):0.#} MB/s"
         : $"{DiskBytesPerSecond:0.#} B/s";
-    public string NetworkText => "n/a"; // Phase 2.
+    public string NetworkText => "-"; // Per-process network deferred to Phase 2 (ETW).
 
     public string InstanceCountText => InstanceCount == 1 ? "1 process" : $"{InstanceCount} processes";
 
