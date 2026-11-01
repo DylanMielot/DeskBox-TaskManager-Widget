@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using System.Runtime.InteropServices;
 using CommunityToolkit.Mvvm.ComponentModel;
 using DeskBox.Models;
@@ -176,6 +177,7 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
 
     private void OnSortDirectionChanged()
     {
+        OnPropertyChanged(nameof(NameSortGlyph));
         OnPropertyChanged(nameof(CpuSortGlyph));
         OnPropertyChanged(nameof(MemorySortGlyph));
         OnPropertyChanged(nameof(DiskSortGlyph));
@@ -204,7 +206,11 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
 
     public void OnDeactivated()
     {
-        StopTimer();
+        // Intentionally do NOT stop the refresh timer here: the widget must keep
+        // refreshing while visible even when it loses focus (e.g. user clicks the
+        // desktop). The timer's Tick handler already pauses refresh when the
+        // window is hidden (_isWindowVisible == false), and
+        // OnWindowVisibilityChanged(false) stops the timer in that case.
     }
 
     /// <summary>
@@ -292,10 +298,27 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
     }
 
     /// <summary>
-    /// Enumerates processes, builds grouped rows, and replaces the displayed
+    /// Raised on the UI thread just before the displayed rows are rebuilt.
+    /// </summary>
+    public event EventHandler? Refreshing;
+
+    /// <summary>
+    /// Raised on the UI thread after the displayed rows have been rebuilt and selection restored.
+    /// </summary>
+    public event EventHandler? Refreshed;
+
+    /// <summary>
+    /// Enumerates processes, builds grouped rows, and refreshes the displayed
     /// collection on the UI thread. Process enumeration runs on the thread pool
     /// so the UI thread is never stalled.
     /// </summary>
+    /// <remarks>
+    /// The existing <see cref="Rows"/> ObservableCollection is mutated in place
+    /// (cleared then repopulated) rather than replaced. Keeping a single
+    /// collection instance avoids the ListView's full container regeneration:
+    /// no entrance animation ("from bottom up") and far less scrollbar movement
+    /// on every refresh. Selection is restored by process identity afterward.
+    /// </remarks>
     public async Task RefreshAsync()
     {
         if (_isDisposed)
@@ -317,19 +340,44 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
                 return;
             }
 
+            // Preserve the user's selection across the refresh: capture the selected
+            // process identity before mutating the collection, then re-select the
+            // matching row (BuildRows creates new row instances each refresh).
+            int? selectedProcessId = SelectedRow?.RepresentativeProcessId;
+
             if (_dispatcherQueue is not null && !_dispatcherQueue.HasThreadAccess)
             {
-                _dispatcherQueue.TryEnqueue(() => Rows = rows);
+                _dispatcherQueue.TryEnqueue(() => RebuildRowsInPlace(rows, selectedProcessId));
             }
             else
             {
-                Rows = rows;
+                RebuildRowsInPlace(rows, selectedProcessId);
             }
         }
         catch (Exception ex)
         {
             App.Log($"[TaskManagerWidgetViewModel] Refresh failed: {ex}");
         }
+    }
+
+    private void RebuildRowsInPlace(ObservableCollection<TaskManagerProcessRow> rows, int? selectedProcessId)
+    {
+        Refreshing?.Invoke(this, EventArgs.Empty);
+
+        Rows.Clear();
+        foreach (var row in rows)
+        {
+            Rows.Add(row);
+        }
+
+        // Restore selection by process identity (the previous SelectedRow reference
+        // is orphaned because BuildRows creates new row instances).
+        if (selectedProcessId is not null)
+        {
+            SelectedRow = Rows.FirstOrDefault(r => r.RepresentativeProcessId == selectedProcessId.Value);
+        }
+
+        Refreshed?.Invoke(this, EventArgs.Empty);
     }
 
     private List<ProcessSnapshot> CollectProcessSnapshots()

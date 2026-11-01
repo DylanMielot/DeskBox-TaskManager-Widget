@@ -7,6 +7,8 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Markup;
+using Microsoft.UI.Xaml.Media;
+using System;
 using System.Threading.Tasks;
 
 namespace DeskBox.Controls.WidgetContents;
@@ -30,7 +32,73 @@ public sealed partial class TaskManagerWidgetContent : UserControl, IWidgetRespo
     public TaskManagerWidgetViewModel ViewModel
     {
         get => (TaskManagerWidgetViewModel)DataContext!;
-        set => DataContext = value;
+        set
+        {
+            if (DataContext is TaskManagerWidgetViewModel oldVm)
+            {
+                oldVm.Refreshing -= OnVmRefreshing;
+                oldVm.Refreshed -= OnVmRefreshed;
+            }
+            DataContext = value;
+            if (value is TaskManagerWidgetViewModel newVm)
+            {
+                newVm.Refreshing += OnVmRefreshing;
+                newVm.Refreshed += OnVmRefreshed;
+            }
+        }
+    }
+
+    private double? _capturedScrollOffset;
+
+    private void OnVmRefreshing(object? sender, EventArgs e)
+    {
+        // Remember where the user was scrolled before the list is rebuilt so we
+        // can put the scrollbar back afterward (keeps the scrollbar steady).
+        _capturedScrollOffset = GetVerticalOffset(ProcessList);
+    }
+
+    private void OnVmRefreshed(object? sender, EventArgs e)
+    {
+        if (_capturedScrollOffset is not double offset)
+        {
+            return;
+        }
+        _capturedScrollOffset = null;
+
+        // Restore the scroll offset after the ListView has rebuilt its items so
+        // the scrollbar stays where the user left it across refreshes.
+        var scrollViewer = FindScrollViewer(ProcessList);
+        if (scrollViewer is not null)
+        {
+            scrollViewer.ChangeView(null, offset, null, true);
+        }
+    }
+
+    private static double GetVerticalOffset(ListView? listView)
+    {
+        var scrollViewer = FindScrollViewer(listView);
+        return scrollViewer is not null ? scrollViewer.VerticalOffset : 0d;
+    }
+
+    private static ScrollViewer? FindScrollViewer(DependencyObject? obj)
+    {
+        if (obj is null)
+        {
+            return null;
+        }
+        if (obj is ScrollViewer scrollViewer)
+        {
+            return scrollViewer;
+        }
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(obj); i++)
+        {
+            var result = FindScrollViewer(VisualTreeHelper.GetChild(obj, i));
+            if (result is not null)
+            {
+                return result;
+            }
+        }
+        return null;
     }
 
     private TaskManagerProcessRow? _contextMenuRow;

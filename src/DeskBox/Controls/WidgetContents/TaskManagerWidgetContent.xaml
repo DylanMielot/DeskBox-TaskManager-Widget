@@ -38,10 +38,10 @@
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="60" />
-            <ColumnDefinition Width="80" />
-            <ColumnDefinition Width="80" />
-            <ColumnDefinition Width="55" />
+            <ColumnDefinition Width="75" />
+            <ColumnDefinition Width="100" />
+            <ColumnDefinition Width="100" />
+            <ColumnDefinition Width="65" />
         </Grid.ColumnDefinitions>
 
         <!-- Capsule summary: shown when the widget is collapsed to its capsule. -->
@@ -73,10 +73,10 @@
             Visibility="{Binding ExpandedVisibility}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="60" />
-                <ColumnDefinition Width="80" />
-                <ColumnDefinition Width="80" />
-                <ColumnDefinition Width="55" />
+                <ColumnDefinition Width="75" />
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="65" />
             </Grid.ColumnDefinitions>
             <Button
                 Grid.Column="0"
@@ -168,10 +168,10 @@
                     <Grid ColumnSpacing="0" RightTapped="ProcessRow_RightTapped">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="60" />
-                            <ColumnDefinition Width="80" />
-                            <ColumnDefinition Width="80" />
-                            <ColumnDefinition Width="55" />
+                            <ColumnDefinition Width="75" />
+                            <ColumnDefinition Width="100" />
+                            <ColumnDefinition Width="100" />
+                            <ColumnDefinition Width="65" />
                         </Grid.ColumnDefinitions>
                         <StackPanel
                             Grid.Column="0"

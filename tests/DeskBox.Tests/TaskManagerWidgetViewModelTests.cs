@@ -73,6 +73,29 @@ public sealed class TaskManagerWidgetViewModelTests
     }
 
     [Fact]
+    public void SortArrow_NameColumnFlipsDirectionOnToggle()
+    {
+        var vm = CreateVm();
+
+        vm.SortColumn = "Name"; // SortDescending keeps its default (true) when set directly
+
+        Assert.Equal("Name", vm.SortColumn);
+        Assert.True(vm.SortDescending);
+        Assert.Equal("▼", vm.NameSortGlyph);
+
+        // Toggling direction on the same (Name) column must flip the arrow.
+        vm.SortDescending = false;
+
+        Assert.False(vm.SortDescending);
+        Assert.Equal("▲", vm.NameSortGlyph);
+
+        vm.SortDescending = true;
+
+        Assert.True(vm.SortDescending);
+        Assert.Equal("▼", vm.NameSortGlyph);
+    }
+
+    [Fact]
     public void HeaderText_ShowsGlobalPercent()
     {
         var vm = CreateVm();
