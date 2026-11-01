@@ -157,6 +157,9 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
     /// <summary>Localized label for the "Terminer la tâche" context-menu item.</summary>
     public string EndTaskText => _localizationService.T("TaskManager.EndTask");
 
+    /// <summary>Localized label for the "Redémarrer" context-menu item.</summary>
+    public string RestartText => _localizationService.T("TaskManager.Restart");
+
     private void OnSortColumnChanged()
     {
         OnPropertyChanged(nameof(NameSortGlyph));
@@ -625,6 +628,179 @@ public sealed partial class TaskManagerWidgetViewModel : ObservableObject, IDisp
             // Traité comme protégé par défaut (prudence).
             return true;
         }
+    }
+
+    // ─── Redémarrer un processus (M5) ───
+
+    /// <summary>Outcome of <see cref="Restart"/>.</summary>
+    public enum RestartOutcome
+    {
+        Success,
+        Protected,
+        NotRestartable,
+        AccessDenied,
+        AlreadyExited,
+        Failed
+    }
+
+    /// <summary>Whether the given row's process group is allowed to be restarted.</summary>
+    public bool CanRestart(TaskManagerProcessRow? row) =>
+        row is not null && !IsProtectedProcessName(row.Name);
+
+    /// <summary>
+    /// Termine le groupe de processus puis relance l'exécutable avec les
+    /// informations de lancement capturées avant terme (chemin, arguments,
+    /// répertoire de travail). Les processus protégés ne peuvent pas être
+    /// redémarrés.
+    /// </summary>
+    public RestartOutcome Restart(TaskManagerProcessRow? row, out string? message)
+    {
+        message = null;
+        if (row is null)
+        {
+            message = _localizationService.T("TaskManager.Restart.ErrorUnknown");
+            return RestartOutcome.Failed;
+        }
+
+        if (IsProtectedProcessName(row.Name))
+        {
+            message = _localizationService.Format("TaskManager.Restart.Protected", row.Name);
+            return RestartOutcome.Protected;
+        }
+
+        string? fileName = null;
+        string? arguments = null;
+        string? workingDirectory = null;
+        bool launchInfoCaptured = false;
+        bool notRestartable = false;
+
+        bool terminated = false;
+        bool accessDenied = false;
+        bool found = false;
+
+        Process[] processes;
+        try
+        {
+            processes = Process.GetProcessesByName(row.Name);
+        }
+        catch
+        {
+            processes = Array.Empty<Process>();
+        }
+
+        foreach (var process in processes)
+        {
+            found = true;
+            try
+            {
+                // Capturer les infos de lancement avant terme (première instance lisible).
+                if (!launchInfoCaptured)
+                {
+                    try
+                    {
+                        fileName = process.MainModule?.FileName;
+                        arguments = process.StartInfo?.Arguments;
+                        workingDirectory = process.StartInfo?.WorkingDirectory;
+                        launchInfoCaptured = !string.IsNullOrEmpty(fileName);
+                    }
+                    catch
+                    {
+                        // Chemin de l'exécutable illisible — processus non redémarrable.
+                        notRestartable = true;
+                    }
+                }
+
+                if (IsProtectedProcessInstance(process))
+                {
+                    continue;
+                }
+
+                // Fermer poliment d'abord lorsque le processus possède une fenêtre.
+                if (!process.HasExited && process.MainWindowHandle != IntPtr.Zero)
+                {
+                    process.CloseMainWindow();
+                    process.Refresh();
+                }
+
+                if (!process.HasExited)
+                {
+                    process.Kill();
+                    process.Refresh();
+                    terminated = true;
+                }
+            }
+            catch (Win32Exception ex) when (ex.NativeErrorCode == 5)
+            {
+                // Accès refusé (processus élevé ou protégé).
+                accessDenied = true;
+            }
+            catch (InvalidOperationException)
+            {
+                // Déjà quitté.
+            }
+            catch
+            {
+                // Processus illisible — on l'ignore.
+            }
+            finally
+            {
+                process.Dispose();
+            }
+        }
+
+        if (!found)
+        {
+            message = _localizationService.T("TaskManager.Restart.AlreadyExited");
+            return RestartOutcome.AlreadyExited;
+        }
+
+        if (notRestartable && !launchInfoCaptured)
+        {
+            message = _localizationService.Format("TaskManager.Restart.NotRestartable", row.Name);
+            return RestartOutcome.NotRestartable;
+        }
+
+        if (!terminated && accessDenied)
+        {
+            message = _localizationService.Format("TaskManager.Restart.AccessDenied", row.Name);
+            return RestartOutcome.AccessDenied;
+        }
+
+        if (!terminated)
+        {
+            message = _localizationService.T("TaskManager.Restart.NothingToDo");
+            return RestartOutcome.Failed;
+        }
+
+        // Relancer l'exécutable avec les infos capturées avant terme.
+        if (string.IsNullOrEmpty(fileName))
+        {
+            message = _localizationService.T("TaskManager.Restart.NothingToDo");
+            return RestartOutcome.Failed;
+        }
+
+        try
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments ?? string.Empty,
+                UseShellExecute = false,
+            };
+            if (!string.IsNullOrEmpty(workingDirectory))
+            {
+                startInfo.WorkingDirectory = workingDirectory;
+            }
+            _ = Process.Start(startInfo);
+        }
+        catch
+        {
+            message = _localizationService.Format("TaskManager.Restart.StartFailed", row.Name);
+            return RestartOutcome.Failed;
+        }
+
+        message = _localizationService.Format("TaskManager.Restart.Success", row.Name);
+        return RestartOutcome.Success;
     }
 
     private void UpdateCapsule(double aggregateCpu, long aggregateMemoryBytes, double aggregateDiskBytesPerSecond,

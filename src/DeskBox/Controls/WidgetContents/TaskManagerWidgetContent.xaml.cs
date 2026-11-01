@@ -71,9 +71,19 @@ public sealed partial class TaskManagerWidgetContent : UserControl, IWidgetRespo
         _contextMenuRow = row;
 
         var flyout = new MenuFlyout();
+
+        var restartItem = new MenuFlyoutItem
+        {
+            Text = Localized.T("TaskManager.Restart"),
+            IsEnabled = ViewModel is { } vm && vm.CanRestart(row),
+        };
+        restartItem.Click += RestartMenuItem_Click;
+        flyout.Items.Add(restartItem);
+
         var endItem = new MenuFlyoutItem
         {
             Text = Localized.T("TaskManager.EndTask"),
+            IsEnabled = ViewModel is { } vm2 && vm2.CanEndTask(row),
         };
         endItem.Click += EndTaskMenuItem_Click;
         flyout.Items.Add(endItem);
@@ -131,6 +141,61 @@ public sealed partial class TaskManagerWidgetContent : UserControl, IWidgetRespo
                 MaxWidth = 480
             },
             PrimaryButtonText = Localized.T("TaskManager.EndTask.PrimaryButton"),
+            CloseButtonText = Localized.T("Common.Close"),
+            DefaultButton = ContentDialogButton.Close,
+        };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+    }
+
+    private async void RestartMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        var row = _contextMenuRow;
+        _contextMenuRow = null;
+        if (row is null)
+        {
+            return;
+        }
+
+        var vm = ViewModel;
+        if (vm is null || !vm.CanRestart(row))
+        {
+            return;
+        }
+
+        bool confirmed = await ConfirmRestartAsync(row);
+        if (!confirmed)
+        {
+            return;
+        }
+
+        var outcome = vm.Restart(row, out var message);
+        if (outcome == TaskManagerWidgetViewModel.RestartOutcome.Success)
+        {
+            _ = vm.RefreshAsync();
+            return;
+        }
+
+        await ShowMessageAsync(
+            Localized.T("TaskManager.Restart.Title"),
+            message ?? Localized.T("TaskManager.Restart.ErrorUnknown"));
+    }
+
+    private async Task<bool> ConfirmRestartAsync(TaskManagerProcessRow row)
+    {
+        var dialog = new ContentDialog
+        {
+            XamlRoot = this.XamlRoot,
+            Title = Localized.T("TaskManager.Restart.Title"),
+            Content = new TextBlock
+            {
+                Text = string.Format(
+                    Localized.T("TaskManager.Restart.Confirm"),
+                    row.Name,
+                    row.InstanceCount),
+                TextWrapping = TextWrapping.Wrap,
+                MaxWidth = 480
+            },
+            PrimaryButtonText = Localized.T("TaskManager.Restart.PrimaryButton"),
             CloseButtonText = Localized.T("Common.Close"),
             DefaultButton = ContentDialogButton.Close,
         };

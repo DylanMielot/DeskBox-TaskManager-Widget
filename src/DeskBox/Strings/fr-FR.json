@@ -3008,6 +3008,18 @@
   "TaskManager.EndTask.AlreadyExited": "Le processus « {0} » n'existe plus.",
   "TaskManager.EndTask.NothingToDo": "Aucun processus n'a pu être terminé.",
   "TaskManager.EndTask.ErrorUnknown": "Une erreur est survenue.",
+  "TaskManager.Restart": "Redémarrer",
+  "TaskManager.Restart.Title": "Redémarrer",
+  "TaskManager.Restart.Confirm": "Voulez-vous redémarrer « {0} » ({1} processus) ?",
+  "TaskManager.Restart.PrimaryButton": "Redémarrer",
+  "TaskManager.Restart.Protected": "« {0} » est protégé et ne peut pas être redémarré.",
+  "TaskManager.Restart.NotRestartable": "« {0} » ne peut pas être redémarré (chemin de l'exécutable introuvable).",
+  "TaskManager.Restart.AccessDenied": "Accès refusé : impossible de redémarrer « {0} ».",
+  "TaskManager.Restart.AlreadyExited": "Le processus « {0} » n'existe plus.",
+  "TaskManager.Restart.NothingToDo": "Aucun processus n'a pu être redémarré.",
+  "TaskManager.Restart.ErrorUnknown": "Une erreur est survenue.",
+  "TaskManager.Restart.Success": "« {0} » a été redémarré.",
+  "TaskManager.Restart.StartFailed": "Impossible de relancer « {0} ».",
   "WidgetContent.TaskManager.StatusLabel": "Implemented",
   "WidgetContent.TaskManager.StatusDescription": "Process list with CPU, memory, disk and network"
 }

@@ -198,4 +198,69 @@ public sealed class TaskManagerWidgetViewModelTests
         vm.SelectedRow = row;
         Assert.Same(row, vm.SelectedRow);
     }
+
+    [Theory]
+    [InlineData("System")]
+    [InlineData("Idle")]
+    [InlineData("dwm")]
+    [InlineData("deskbox")]
+    public void CanRestart_ProtectedProcessName_ReturnsFalse(string name)
+    {
+        var vm = CreateVm();
+        var row = MakeRow(1, name, 0, 0);
+
+        Assert.False(vm.CanRestart(row));
+    }
+
+    [Fact]
+    public void CanRestart_NormalProcessName_ReturnsTrue()
+    {
+        var vm = CreateVm();
+        var row = MakeRow(1, "notepad", 0, 0);
+
+        Assert.True(vm.CanRestart(row));
+    }
+
+    [Fact]
+    public void CanRestart_NullRow_ReturnsFalse()
+    {
+        var vm = CreateVm();
+
+        Assert.False(vm.CanRestart(null));
+    }
+
+    [Fact]
+    public void Restart_NullRow_ReturnsFailedWithMessage()
+    {
+        var vm = CreateVm();
+
+        var outcome = vm.Restart(null, out var message);
+
+        Assert.Equal(TaskManagerWidgetViewModel.RestartOutcome.Failed, outcome);
+        Assert.NotNull(message);
+    }
+
+    [Fact]
+    public void Restart_ProtectedProcess_ReturnsProtectedAndNamesIt()
+    {
+        var vm = CreateVm();
+        var row = MakeRow(1, "System", 0, 0);
+
+        var outcome = vm.Restart(row, out var message);
+
+        Assert.Equal(TaskManagerWidgetViewModel.RestartOutcome.Protected, outcome);
+        Assert.Contains("System", message!);
+    }
+
+    [Fact]
+    public void Restart_NonexistentProcess_ReturnsAlreadyExited()
+    {
+        var vm = CreateVm();
+        var row = MakeRow(1, "__DeskBox_Nonexistent_Process__", 0, 0);
+
+        var outcome = vm.Restart(row, out var message);
+
+        Assert.Equal(TaskManagerWidgetViewModel.RestartOutcome.AlreadyExited, outcome);
+        Assert.NotNull(message);
+    }
 }
